@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Listings</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container py-5">
+  <a href="clone.html" class="btn btn-secondary mb-4 d-none" id="adminAddBtn">Add New Job</a>
+  <div class="sec-heading center">
+  <h2 class="text-center mb-4">Available Position</h2>
+  <p>Explore exciting roles across various industries and take the next step in your career journey.
+</p>
+</div>
+</p>
+  <div id="cards" class="row g-4"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="jobModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer">
+        <button id="editBtn" class="btn btn-warning d-none">Edit</button>
+        <button id="deleteBtn" class="btn btn-danger d-none">Delete</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const container = document.getElementById('cards');
+  let jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
+  const editBtn = document.getElementById('editBtn');
+  const deleteBtn = document.getElementById('deleteBtn');
+  let selectedIndex = null;
+
+  function formatSalaryRange(salary) {
+    if (!salary) return '—';
+    const match = salary.match(/(\d+)\s*[-to]+\s*(\d+)/i);
+    if (match) {
+      const start = parseInt(match[1]) * 100000;
+      const end = parseInt(match[2]) * 100000;
+      return `₹${start.toLocaleString('en-IN')} - ₹${end.toLocaleString('en-IN')}`;
+    }
+    return salary;
+  }
+
+  function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  function renderCards() {
+    container.innerHTML = '';
+    if (jobs.length === 0) {
+      container.innerHTML = '<p class="text-muted">No jobs posted yet.</p>';
+    } else {
+      jobs.forEach((job, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-md-6 col-lg-4';
+
+        const card = document.createElement('div');
+        card.className = 'card h-100 shadow-sm';
+        card.innerHTML = `
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">${job.title}</h5>
+            <h6 class="card-subtitle mb-2 text-muted">${job.company} • ${job.location}</h6>
+            <p class="card-text mb-1"><strong>Salary:</strong> ${formatSalaryRange(job.salary)}</p>
+            <p class="card-text"><strong>Type:</strong> ${job.type}</p>
+            <p class="card-text">${job.desc}</p>
+            ${job.req ? `<p class="card-text"><strong>Requirements:</strong> ${job.req}</p>` : ''}
+            <hr>
+            <div class="d-flex justify-content-between align-items-center">
+              <small class="text-muted">Posted on ${formatDate(job.posted)}</small>
+              <button class="btn btn-primary btn-sm view-details" data-index="${index}" data-bs-toggle="modal" data-bs-target="#jobModal">View Details</button>
+            </div>
+          </div>`;
+
+        col.appendChild(card);
+        container.appendChild(col);
+      });
+    }
+  }
+
+  // Modal logic
+  const modal = document.getElementById('jobModal');
+  modal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    selectedIndex = button.getAttribute('data-index');
+    const job = jobs[selectedIndex];
+
+    document.getElementById('modalTitle').textContent = job.title;
+    document.getElementById('modalBody').innerHTML = `
+      <h6 class="text-muted mb-3">${job.company} • ${job.location}</h6>
+      <p><strong>Salary:</strong> ${formatSalaryRange(job.salary)}</p>
+      <p><strong>Type:</strong> ${job.type}</p>
+      <p><strong>Description:</strong><br>${job.desc}</p>
+      ${job.req ? `<p><strong>Requirements:</strong><br>${job.req}</p>` : ''}
+      ${job.url ? `<p><a href="${job.url}" target="_blank" class="btn btn-success">Apply Now</a></p>` : ''}
+      <hr>
+      <p class="text-muted mb-0">Posted on ${formatDate(job.posted)}</p>`;
+
+    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    editBtn.classList.toggle('d-none', !isAdmin);
+    deleteBtn.classList.toggle('d-none', !isAdmin);
+  });
+
+  // Delete handler
+  deleteBtn.addEventListener('click', () => {
+    if (selectedIndex !== null && confirm("Are you sure you want to delete this job?")) {
+      jobs.splice(selectedIndex, 1);
+      localStorage.setItem('jobs', JSON.stringify(jobs));
+      bootstrap.Modal.getInstance(modal).hide();
+      renderCards();
+    }
+  });
+
+  // Edit handler (redirects to form with edit mode)
+  editBtn.addEventListener('click', () => {
+    localStorage.setItem('editIndex', selectedIndex);
+    window.location.href = 'add-job.html';
+  });
+
+  // Initial load
+  renderCards();
+</script>
+
+<script>
+  // Show "Add New Job" button if logged in as admin
+  window.addEventListener('DOMContentLoaded', () => {
+    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    if (isAdmin) {
+      const btn = document.getElementById('adminAddBtn');
+      if (btn) btn.classList.remove('d-none');
+    }
+  });
+</script>
+
+</body>
+</html>
